@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DocConvert - 文档转换 & OCR 识别</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            padding: 40px 0;
+            color: white;
+        }
+        
+        .logo {
+            width: 80px;
+            height: 80px;
+            background: rgba(255,255,255,0.2);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 36px;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+        
+        h1 {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        
+        .subtitle {
+            opacity: 0.9;
+            font-size: 16px;
+        }
+        
+        .main-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+        
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .tab {
+            flex: 1;
+            padding: 20px;
+            background: #f7fafc;
+            border: none;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 600;
+            color: #718096;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .tab:hover {
+            background: #edf2f7;
+            color: #4a5568;
+        }
+        
+        .tab.active {
+            background: white;
+            color: #667eea;
+            border-bottom: 2px solid #667eea;
+        }
+        
+        .tab-icon {
+            font-size: 20px;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .panel {
+            display: none;
+        }
+        
+        .panel.active {
+            display: block;
+        }
+        
+        .panel-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 8px;
+        }
+        
+        .panel-desc {
+            color: #718096;
+            font-size: 14px;
+            margin-bottom: 28px;
+        }
+        
+        /* Upload Zone */
+        .upload-zone {
+            border: 2px dashed #cbd5e0;
+            border-radius: 16px;
+            padding: 48px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            background: #f7fafc;
+        }
+        
+        .upload-zone:hover, .upload-zone.dragover {
+            border-color: #667eea;
+            background: #edf2f7;
+        }
+        
+        .upload-icon {
+            font-size: 56px;
+            margin-bottom: 16px;
+        }
+        
+        .upload-text {
+            color: #4a5568;
+            font-size: 16px;
+            font-weight: 500;
+        }
+        
+        .upload-hint {
+            color: #a0aec0;
+            font-size: 13px;
+            margin-top: 8px;
+        }
+        
+        input[type="file"] {
+            display: none;
+        }
+        
+        /* File Info */
+        .file-info {
+            display: none;
+            background: #edf2f7;
+            border-radius: 12px;
+            padding: 16px;
+            margin: 20px 0;
+        }
+        
+        .file-info.show {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .file-icon {
+            font-size: 24px;
+        }
+        
+        .file-details {
+            flex: 1;
+        }
+        
+        .file-name {
+            font-weight: 600;
+            color: #2d3748;
+            font-size: 14px;
+            word-break: break-all;
+        }
+        
+        .file-size {
+            color: #718096;
+            font-size: 12px;
+        }
+        
+        .file-remove {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 18px;
+            color: #a0aec0;
+            padding: 4px;
+        }
+        
+        .file-remove:hover {
+            color: #e53e3e;
+        }
+        
+        /* Format Selection */
+        .format-select {
+            margin: 24px 0;
+        }
+        
+        .format-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 10px;
+        }
+        
+        .format-options {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+        
+        .format-option {
+            position: relative;
+        }
+        
+        .format-option input {
+            position: absolute;
+            opacity: 0;
+        }
+        
+        .format-option label {
+            display: block;
+            padding: 12px 8px;
+            text-align: center;
+            background: #edf2f7;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            color: #4a5568;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+        
+        .format-option input:checked + label {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: transparent;
+        }
+        
+        .format-option label:hover {
+            border-color: #667eea;
+        }
+        
+        /* Action Button */
+        .action-btn {
+            width: 100%;
+            padding: 16px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .action-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px -5px rgba(102, 126, 234, 0.4);
+        }
+        
+        .action-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Status & Results */
+        .status {
+            margin-top: 20px;
+            padding: 14px 18px;
+            border-radius: 12px;
+            font-size: 14px;
+            display: none;
+        }
+        
+        .status.show {
+            display: block;
+        }
+        
+        .status.success {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+        
+        .status.error {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+        
+        .status.loading {
+            background: #e9d8fd;
+            color: #553c9a;
+        }
+        
+        /* OCR Result */
+        .ocr-result {
+            display: none;
+            margin-top: 20px;
+            background: #f7fafc;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .ocr-result.show {
+            display: block;
+        }
+        
+        .ocr-result-title {
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .ocr-text {
+            background: white;
+            border-radius: 8px;
+            padding: 16px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #2d3748;
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .copy-btn {
+            margin-top: 12px;
+            padding: 8px 16px;
+            background: #edf2f7;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            color: #4a5568;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .copy-btn:hover {
+            background: #e2e8f0;
+        }
+        
+        /* Preview */
+        .preview-container {
+            display: none;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .preview-container.show {
+            display: block;
+        }
+        
+        .preview-image {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 32px;
+            border-top: 1px solid #e2e8f0;
+            background: #f7fafc;
+        }
+        
+        .footer-title {
+            color: #718096;
+            font-size: 12px;
+            margin-bottom: 10px;
+        }
+        
+        .supported-formats {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 6px;
+        }
+        
+        .format-tag {
+            background: white;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            color: #718096;
+            border: 1px solid #e2e8f0;
+        }
+        
+        /* Responsive */
+        @media (max-width: 600px) {
+            .content {
+                padding: 24px;
+            }
+            
+            .format-options {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .upload-zone {
+                padding: 32px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">📄</div>
+            <h1>DocConvert</h1>
+            <p class="subtitle">文档转换 & OCR 文字识别</p>
+        </div>
+        
+        <div class="main-card">
+            <div class="tabs">
+                <button class="tab active" data-tab="convert">
+                    <span class="tab-icon">🔄</span>
+                    文档转换
+                </button>
+                <button class="tab" data-tab="ocr">
+                    <span class="tab-icon">🔍</span>
+                    OCR 识别
+                </button>
+            </div>
+            
+            <div class="content">
+                <!-- Document Conversion Panel -->
+                <div class="panel active" id="convert-panel">
+                    <h2 class="panel-title">文档格式转换</h2>
+                    <p class="panel-desc">支持 Word、Excel、PPT、图片等多种格式互转</p>
+                    
+                    <div class="upload-zone" id="convertUploadZone">
+                        <div class="upload-icon">☁️</div>
+                        <div class="upload-text">点击或拖拽文件到此处</div>
+                        <div class="upload-hint">支持 DOCX, XLSX, PPTX, ODT, PDF 等格式</div>
+                        <input type="file" id="convertFileInput" accept="*/*">
+                    </div>
+                    
+                    <div class="file-info" id="convertFileInfo">
+                        <span class="file-icon">📎</span>
+                        <div class="file-details">
+                            <div class="file-name" id="convertFileName"></div>
+                            <div class="file-size" id="convertFileSize"></div>
+                        </div>
+                        <button class="file-remove" id="convertRemoveFile" title="移除">×</button>
+                    </div>
+                    
+                    <div class="format-select">
+                        <label class="format-label">转换为</label>
+                        <div class="format-options">
+                            <div class="format-option">
+                                <input type="radio" name="format" id="pdf" value="pdf" checked>
+                                <label for="pdf">PDF</label>
+                            </div>
+                            <div class="format-option">
+                                <input type="radio" name="format" id="docx" value="docx">
+                                <label for="docx">DOCX</label>
+                            </div>
+                            <div class="format-option">
+                                <input type="radio" name="format" id="xlsx" value="xlsx">
+                                <label for="xlsx">XLSX</label>
+                            </div>
+                            <div class="format-option">
+                                <input type="radio" name="format" id="pptx" value="pptx">
+                                <label for="pptx">PPTX</label>
+                            </div>
+                            <div class="format-option">
+                                <input type="radio" name="format" id="odt" value="odt">
+                                <label for="odt">ODT</label>
+                            </div>
+                            <div class="format-option">
+                                <input type="radio" name="format" id="ods" value="ods">
+                                <label for="ods">ODS</label>
+                            </div>
+                            <div class="format-option">
+                                <input type="radio" name="format" id="txt" value="txt">
+                                <label for="txt">TXT</label>
+                            </div>
+                            <div class="format-option">
+                                <input type="radio" name="format" id="html" value="html">
+                                <label for="html">HTML</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button class="action-btn" id="convertBtn" disabled>
+                        <span>开始转换</span>
+                    </button>
+                    
+                    <div class="status" id="convertStatus"></div>
+                </div>
+                
+                <!-- OCR Panel -->
+                <div class="panel" id="ocr-panel">
+                    <h2 class="panel-title">OCR 文字识别</h2>
+                    <p class="panel-desc">识别图片中的文字，支持中英文混合</p>
+                    
+                    <div class="upload-zone" id="ocrUploadZone">
+                        <div class="upload-icon">🖼️</div>
+                        <div class="upload-text">点击或拖拽图片到此处</div>
+                        <div class="upload-hint">支持 JPG, PNG, WEBP, GIF 等图片格式</div>
+                        <input type="file" id="ocrFileInput" accept="image/*">
+                    </div>
+                    
+                    <div class="file-info" id="ocrFileInfo">
+                        <span class="file-icon">🖼️</span>
+                        <div class="file-details">
+                            <div class="file-name" id="ocrFileName"></div>
+                            <div class="file-size" id="ocrFileSize"></div>
+                        </div>
+                        <button class="file-remove" id="ocrRemoveFile" title="移除">×</button>
+                    </div>
+                    
+                    <div class="preview-container" id="previewContainer">
+                        <img class="preview-image" id="previewImage" src="" alt="Preview">
+                    </div>
+                    
+                    <button class="action-btn" id="ocrBtn" disabled>
+                        <span>开始识别</span>
+                    </button>
+                    
+                    <div class="status" id="ocrStatus"></div>
+                    
+                    <div class="ocr-result" id="ocrResult">
+                        <div class="ocr-result-title">
+                            📝 识别结果
+                        </div>
+                        <div class="ocr-text" id="ocrText"></div>
+                        <button class="copy-btn" id="copyBtn">📋 复制文本</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="footer">
+                <div class="footer-title">支持格式</div>
+                <div class="supported-formats">
+                    <span class="format-tag">DOC</span>
+                    <span class="format-tag">DOCX</span>
+                    <span class="format-tag">XLS</span>
+                    <span class="format-tag">XLSX</span>
+                    <span class="format-tag">PPT</span>
+                    <span class="format-tag">PPTX</span>
+                    <span class="format-tag">PDF</span>
+                    <span class="format-tag">ODT</span>
+                    <span class="format-tag">ODS</span>
+                    <span class="format-tag">ODP</span>
+                    <span class="format-tag">JPG</span>
+                    <span class="format-tag">PNG</span>
+                    <span class="format-tag">OCR</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Tab Switching
+        const tabs = document.querySelectorAll('.tab');
+        const panels = document.querySelectorAll('.panel');
+        
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const targetTab = tab.dataset.tab;
+                
+                tabs.forEach(t => t.classList.remove('active'));
+                panels.forEach(p => p.classList.remove('active'));
+                
+                tab.classList.add('active');
+                document.getElementById(`${targetTab}-panel`).classList.add('active');
+            });
+        });
+        
+        // Utility Functions
+        function formatSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        function showStatus(element, message, type) {
+            element.textContent = message;
+            element.className = 'status show ' + type;
+        }
+        
+        function hideStatus(element) {
+            element.classList.remove('show');
+        }
+        
+        // Document Conversion Module
+        const convertUploadZone = document.getElementById('convertUploadZone');
+        const convertFileInput = document.getElementById('convertFileInput');
+        const convertFileInfo = document.getElementById('convertFileInfo');
+        const convertFileName = document.getElementById('convertFileName');
+        const convertFileSize = document.getElementById('convertFileSize');
+        const convertRemoveFile = document.getElementById('convertRemoveFile');
+        const convertBtn = document.getElementById('convertBtn');
+        const convertStatus = document.getElementById('convertStatus');
+        
+        let convertSelectedFile = null;
+        
+        function showConvertFile(file) {
+            convertSelectedFile = file;
+            convertFileName.textContent = file.name;
+            convertFileSize.textContent = formatSize(file.size);
+            convertFileInfo.classList.add('show');
+            convertBtn.disabled = false;
+        }
+        
+        function clearConvertFile() {
+            convertSelectedFile = null;
+            convertFileInput.value = '';
+            convertFileInfo.classList.remove('show');
+            convertBtn.disabled = true;
+        }
+        
+        convertUploadZone.addEventListener('click', () => convertFileInput.click());
+        convertUploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            convertUploadZone.classList.add('dragover');
+        });
+        convertUploadZone.addEventListener('dragleave', () => {
+            convertUploadZone.classList.remove('dragover');
+        });
+        convertUploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            convertUploadZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length > 0) {
+                showConvertFile(e.dataTransfer.files[0]);
+            }
+        });
+        convertFileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                showConvertFile(e.target.files[0]);
+            }
+        });
+        convertRemoveFile.addEventListener('click', (e) => {
+            e.stopPropagation();
+            clearConvertFile();
+            hideStatus(convertStatus);
+        });
+        
+        convertBtn.addEventListener('click', async () => {
+            if (!convertSelectedFile) return;
+            
+            const format = document.querySelector('input[name="format"]:checked').value;
+            
+            convertBtn.disabled = true;
+            convertBtn.innerHTML = '<div class="spinner"></div><span>转换中...</span>';
+            showStatus(convertStatus, '正在转换文档，请稍候...', 'loading');
+            
+            const formData = new FormData();
+            formData.append('file', convertSelectedFile);
+            formData.append('convert-to', format);
+            
+            try {
+                const response = await fetch('/request', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    throw new Error('转换失败: ' + response.statusText);
+                }
+                
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = convertSelectedFile.name.replace(/\.[^/.]+$/, '') + '.' + format;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                showStatus(convertStatus, '✅ 转换成功！文件已开始下载', 'success');
+            } catch (error) {
+                showStatus(convertStatus, '❌ ' + error.message, 'error');
+            } finally {
+                convertBtn.disabled = false;
+                convertBtn.innerHTML = '<span>开始转换</span>';
+            }
+        });
+        
+        // OCR Module
+        const ocrUploadZone = document.getElementById('ocrUploadZone');
+        const ocrFileInput = document.getElementById('ocrFileInput');
+        const ocrFileInfo = document.getElementById('ocrFileInfo');
+        const ocrFileName = document.getElementById('ocrFileName');
+        const ocrFileSize = document.getElementById('ocrFileSize');
+        const ocrRemoveFile = document.getElementById('ocrRemoveFile');
+        const ocrBtn = document.getElementById('ocrBtn');
+        const ocrStatus = document.getElementById('ocrStatus');
+        const previewContainer = document.getElementById('previewContainer');
+        const previewImage = document.getElementById('previewImage');
+        const ocrResult = document.getElementById('ocrResult');
+        const ocrText = document.getElementById('ocrText');
+        const copyBtn = document.getElementById('copyBtn');
+        
+        let ocrSelectedFile = null;
+        
+        function showOcrFile(file) {
+            ocrSelectedFile = file;
+            ocrFileName.textContent = file.name;
+            ocrFileSize.textContent = formatSize(file.size);
+            ocrFileInfo.classList.add('show');
+            
+            // Show preview
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                previewImage.src = e.target.result;
+                previewContainer.classList.add('show');
+            };
+            reader.readAsDataURL(file);
+            
+            ocrBtn.disabled = false;
+            ocrResult.classList.remove('show');
+        }
+        
+        function clearOcrFile() {
+            ocrSelectedFile = null;
+            ocrFileInput.value = '';
+            ocrFileInfo.classList.remove('show');
+            previewContainer.classList.remove('show');
+            ocrBtn.disabled = true;
+            ocrResult.classList.remove('show');
+        }
+        
+        ocrUploadZone.addEventListener('click', () => ocrFileInput.click());
+        ocrUploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            ocrUploadZone.classList.add('dragover');
+        });
+        ocrUploadZone.addEventListener('dragleave', () => {
+            ocrUploadZone.classList.remove('dragover');
+        });
+        ocrUploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            ocrUploadZone.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0 && files[0].type.startsWith('image/')) {
+                showOcrFile(files[0]);
+            } else {
+                showStatus(ocrStatus, '请选择图片文件', 'error');
+            }
+        });
+        ocrFileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                showOcrFile(e.target.files[0]);
+            }
+        });
+        ocrRemoveFile.addEventListener('click', (e) => {
+            e.stopPropagation();
+            clearOcrFile();
+            hideStatus(ocrStatus);
+        });
+        
+        ocrBtn.addEventListener('click', async () => {
+            if (!ocrSelectedFile) return;
+            
+            ocrBtn.disabled = true;
+            ocrBtn.innerHTML = '<div class="spinner"></div><span>识别中...</span>';
+            showStatus(ocrStatus, '正在识别文字，请稍候...', 'loading');
+            ocrResult.classList.remove('show');
+            
+            const formData = new FormData();
+            formData.append('file', ocrSelectedFile);
+            
+            try {
+                const response = await fetch('/ocr', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    throw new Error('识别失败: ' + response.statusText);
+                }
+                
+                const result = await response.json();
+                ocrText.textContent = result.text || '未识别到文字';
+                ocrResult.classList.add('show');
+                showStatus(ocrStatus, '✅ 识别成功！', 'success');
+            } catch (error) {
+                showStatus(ocrStatus, '❌ ' + error.message, 'error');
+            } finally {
+                ocrBtn.disabled = false;
+                ocrBtn.innerHTML = '<span>开始识别</span>';
+            }
+        });
+        
+        copyBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(ocrText.textContent).then(() => {
+                copyBtn.textContent = '✅ 已复制';
+                setTimeout(() => {
+                    copyBtn.textContent = '📋 复制文本';
+                }, 2000);
+            });
+        });
+    </script>
+</body>
+</html>
